@@ -4,6 +4,16 @@ import { copyText, letterUrl, shareLink } from '@/lib/share';
 import { FONT_LABELS, PAPER_LABELS, RIBBON_LABELS, SEAL_LABELS, WRAP_LABELS } from '@/lib/letter/options';
 import type { LetterConfig } from '@/lib/letter/schema';
 
+/** True for plain-http links that aren't localhost, which recipients outside the owner's network usually can't open. */
+function isPrivateHttp(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
 export function StepShare({
   config,
   slug,
@@ -23,6 +33,7 @@ export function StepShare({
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const url = slug ? letterUrl(slug) : null;
+  const insecure = url !== null && isPrivateHttp(url);
 
   async function copy() {
     if (!url) return;
@@ -77,6 +88,12 @@ export function StepShare({
             <button type="button" className="btn btn-primary" onClick={copy}>Salin link</button>
             <button type="button" className="btn btn-ghost" onClick={share}>Bagikan</button>
           </div>
+          {insecure && (
+            <p className="alert alert-error" role="status">
+              Link ini masih http, jadi biasanya hanya bisa dibuka dari jaringanmu sendiri. Buka panel admin lewat alamat https
+              (misalnya Tailscale Funnel atau domainmu), lalu salin link dari sana supaya bisa dibuka dari mana saja.
+            </p>
+          )}
           <p className="hint" aria-live="polite">{notice ?? 'Kalau suratnya diedit nanti, link-nya tetap sama.'}</p>
         </div>
       )}

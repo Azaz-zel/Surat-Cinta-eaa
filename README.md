@@ -16,7 +16,7 @@ Spec desain: [`docs/superpowers/specs/2026-11-04-surat-cinta-design.md`](docs/su
 1. **Buat proyek Supabase**, lalu jalankan migrasi di `supabase/migrations/` (lewat SQL editor atau `supabase db push`). Migrasi ini membuat tabel `letters` beserta RLS, bucket privat `media`, dan policy Storage-nya.
 2. **Buat akun admin** di Supabase Dashboard › Authentication › Users › Add user (email + password).
 3. **Matikan pendaftaran publik** di Authentication › Sign In / Providers › nonaktifkan "Allow new users to sign up", supaya hanya akunmu yang bisa login.
-4. **Isi environment**: salin `.env.example` ke `.env.local`, lalu isi URL, anon key, service role key, dan `NEXT_PUBLIC_SITE_URL` (domain tempat web ini dibuka).
+4. **Isi environment**: salin `.env.example` ke `.env.local`, lalu isi URL, anon key, service role key, dan `NEXT_PUBLIC_SITE_URL` (alamat https publik web ini, dipakai untuk gambar preview link).
 5. Jalankan:
 
    ```bash
@@ -32,7 +32,7 @@ npm run build
 npm start          # next start, default port 3000
 ```
 
-Jalankan di belakang reverse proxy (misalnya Nginx atau Caddy) dengan HTTPS. Isi env yang sama di server. `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai di server dan tidak pernah dikirim ke browser.
+Web ini harus bisa dibuka publik lewat HTTPS supaya link surat bisa dibuka dari luar jaringanmu, misalnya lewat Tailscale Funnel (`tailscale funnel --bg 3003`), Cloudflare Tunnel, atau reverse proxy (Nginx atau Caddy) dengan domain. Link share mengikuti alamat yang kamu pakai untuk membuka `/admin`, jadi buka admin lewat alamat https itu. Isi env yang sama di server. `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai di server dan tidak pernah dikirim ke browser.
 
 ## Keamanan singkat
 

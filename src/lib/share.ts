@@ -1,5 +1,11 @@
+/**
+ * Share links follow the address the admin is using right now, so opening the
+ * admin through a public HTTPS address (Tailscale Funnel, Cloudflare Tunnel,
+ * a domain) yields HTTPS links with no rebuild. NEXT_PUBLIC_SITE_URL is only a
+ * fallback for code that runs outside the browser.
+ */
 export function letterUrl(slug: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  const base = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL ?? '';
   return `${base.replace(/\/$/, '')}/s/${slug}`;
 }
 
