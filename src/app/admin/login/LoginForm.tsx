@@ -8,7 +8,7 @@ export function LoginForm() {
     <form action={action} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="field">
         <label className="label" htmlFor="email">Email</label>
-        <input className="input" id="email" name="email" type="email" autoComplete="email" required />
+        <input className="input" id="email" name="email" type="email" autoComplete="email" defaultValue={state.email} key={`e-${state.email}`} required />
       </div>
       <div className="field">
         <label className="label" htmlFor="password">Password</label>

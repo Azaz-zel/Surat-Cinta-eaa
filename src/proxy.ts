@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 /**
- * Guards /admin/*: without a session every admin page except /admin/login
- * redirects to the login page. Also refreshes the Supabase session cookie.
+ * Guards /admin/*: without a session every admin page except /admin/login and
+ * /admin/register redirects to the login page. Also refreshes the Supabase session cookie.
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -30,15 +30,15 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isLogin = pathname === '/admin/login';
+  const isPublic = pathname === '/admin/login' || pathname === '/admin/register';
 
-  if (!user && !isLogin) {
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/admin/login';
     url.search = '';
     return NextResponse.redirect(url);
   }
-  if (user && isLogin) {
+  if (user && isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/admin';
     url.search = '';
