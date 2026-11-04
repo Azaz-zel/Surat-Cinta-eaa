@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { deleteLetter } from '../actions';
 import { copyText, letterUrl } from '@/lib/share';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const dateFormat = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -16,6 +17,7 @@ export function LetterRow(props: {
 }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
   async function copy() {
@@ -25,10 +27,14 @@ export function LetterRow(props: {
   }
 
   function remove() {
-    if (!window.confirm(`Hapus surat untuk ${props.recipient}? Link-nya tidak bisa dibuka lagi.`)) return;
+    setError(null);
     startTransition(async () => {
       const res = await deleteLetter(props.id);
-      if (!res.ok) setError(res.error ?? 'Gagal menghapus.');
+      // On success the list refreshes and this row unmounts with its dialog.
+      if (!res.ok) {
+        setConfirming(false);
+        setError(res.error ?? 'Gagal menghapus.');
+      }
     });
   }
 
@@ -49,10 +55,20 @@ export function LetterRow(props: {
         <button className="btn btn-ghost" type="button" onClick={copy} aria-live="polite">
           {copied ? 'Tersalin' : 'Salin link'}
         </button>
-        <button className="btn btn-danger" type="button" onClick={remove} disabled={pending} aria-label={`Hapus surat untuk ${props.recipient}`}>
+        <button className="btn btn-danger" type="button" onClick={() => setConfirming(true)} disabled={pending} aria-label={`Hapus surat untuk ${props.recipient}`}>
           {pending ? 'Menghapus…' : 'Hapus'}
         </button>
       </div>
+      <ConfirmDialog
+        open={confirming}
+        title={`Hapus surat untuk ${props.recipient}?`}
+        message="Link-nya tidak bisa dibuka lagi, dan musik serta fotonya ikut terhapus. Ini tidak bisa dibatalkan."
+        confirmLabel="Ya, hapus"
+        pendingLabel="Menghapus…"
+        pending={pending}
+        onConfirm={remove}
+        onCancel={() => setConfirming(false)}
+      />
     </li>
   );
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -9,16 +10,64 @@ import { letterConfigSchema } from '@/lib/letter/schema';
 import { MAX_MUSIC_BYTES, MAX_PHOTO_BYTES } from '@/lib/letter/options';
 import { generateSlug } from '@/lib/slug';
 
-export type LoginState = { error?: string };
+export type LoginState = { error?: string; email?: string };
 
 export async function signIn(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
-  if (!email || !password) return { error: 'Email dan password wajib diisi.' };
+  if (!email || !password) return { error: 'Email dan password wajib diisi.', email };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: 'Email atau password salah.' };
+  if (error) return { error: 'Email atau password salah.', email };
+  redirect('/admin');
+}
+
+/** Returned values refill the form, since React resets it after the action runs. Passwords are never echoed back. */
+export type RegisterState = { error?: string; email?: string; code?: string };
+
+function sameSecret(a: string, b: string): boolean {
+  const ha = createHash('sha256').update(a).digest();
+  const hb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
+const registerSchema = z
+  .object({
+    email: z.string().trim().email('Format email tidak valid.'),
+    password: z.string().min(8, 'Password minimal 8 karakter.').max(72, 'Password maksimal 72 karakter.'),
+    confirm: z.string(),
+    code: z.string().trim(),
+  })
+  .refine((v) => v.password === v.confirm, { message: 'Konfirmasi password tidak sama.', path: ['confirm'] });
+
+/** Registration is open only when REGISTER_INVITE_CODE is set, and only to people who know the code. */
+export async function register(_prev: RegisterState, formData: FormData): Promise<RegisterState> {
+  const expected = process.env.REGISTER_INVITE_CODE;
+  if (!expected) return { error: 'Pendaftaran sedang ditutup.' };
+
+  const parsed = registerSchema.safeParse({
+    email: formData.get('email') ?? '',
+    password: formData.get('password') ?? '',
+    confirm: formData.get('confirm') ?? '',
+    code: formData.get('code') ?? '',
+  });
+  const echo = { email: String(formData.get('email') ?? ''), code: String(formData.get('code') ?? '') };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Data belum lengkap.', ...echo };
+  const { email, password, code } = parsed.data;
+  if (!sameSecret(code, expected)) return { error: 'Kode undangan salah.', ...echo };
+
+  // Created with the service role so it works even with public sign-ups disabled in Supabase,
+  // and without a confirmation email.
+  const { error } = await createAdminClient().auth.admin.createUser({ email, password, email_confirm: true });
+  if (error) {
+    const taken = error.status === 422 || /already/i.test(error.message);
+    return { error: taken ? 'Email ini sudah terdaftar. Silakan masuk.' : 'Gagal membuat akun. Coba lagi.', ...echo };
+  }
+
+  const supabase = await createClient();
+  const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+  if (loginError) redirect('/admin/login');
   redirect('/admin');
 }
 

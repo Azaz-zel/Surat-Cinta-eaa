@@ -344,7 +344,6 @@ a:hover {
   top: 12.8em;
   width: 30em;
   height: 19.6em;
-  perspective: 90em;
   transform-origin: 50% 100%;
 }
 .env-back {
@@ -431,20 +430,20 @@ a:hover {
   height: 11.2em;
   z-index: 4;
   transform-origin: 50% 0;
-  transform-style: preserve-3d;
 }
+/* The flap opens with a 2D fold (scaleY 1 → -1) instead of a 3D rotation:
+   Safari on iPhone draws 3D flaps with clip-path inconsistently, and 2D looks
+   the same in every browser. The liner face takes over halfway through. */
 .env-face {
   position: absolute;
   inset: 0;
   clip-path: polygon(0 0, 100% 0, 50% 100%);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 .env-flap-front {
   background-image: linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14));
 }
 .env-flap-back {
-  transform: rotateX(180deg);
+  opacity: 0;
 }
 .liner-plain {
   background-color: var(--blush);
@@ -503,7 +502,13 @@ a:hover {
   animation: sealOff 0.6s 0.1s ease-in forwards;
 }
 .st-animate .env-flap {
-  animation: flapOpen 0.7s 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards, fadeOut 0.45s 1.7s ease-in forwards;
+  animation: flapOpen 0.7s 0.55s ease-in-out forwards, fadeOut 0.45s 1.7s ease-in forwards;
+}
+.st-animate .env-flap-front {
+  animation: faceOut 0.7s 0.55s linear forwards;
+}
+.st-animate .env-flap-back {
+  animation: faceIn 0.7s 0.55s linear forwards;
 }
 .st-animate .env-letter-wrap {
   animation: rise 0.7s 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
@@ -534,18 +539,39 @@ a:hover {
 }
 @keyframes flapOpen {
   0% {
-    transform: rotateX(0);
+    transform: scaleY(1);
     z-index: 4;
   }
-  49% {
+  49.9% {
     z-index: 4;
   }
   50% {
+    transform: scaleY(0);
     z-index: 1;
   }
   100% {
-    transform: rotateX(180deg);
+    transform: scaleY(-1);
     z-index: 1;
+  }
+}
+@keyframes faceOut {
+  0%,
+  49.9% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes faceIn {
+  0%,
+  49.9% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
   }
 }
 @keyframes rise {
@@ -580,6 +606,8 @@ a:hover {
   }
   .st-animate .env-seal,
   .st-animate .env-flap,
+  .st-animate .env-flap-front,
+  .st-animate .env-flap-back,
   .st-animate .env-letter-wrap,
   .st-animate .env-back,
   .st-animate .env-pocket,
@@ -1208,5 +1236,80 @@ a:hover {
     font-size: 14px;
     font-weight: 600;
     color: var(--burgundy);
+  }
+}
+
+/* Confirmation dialog */
+.btn-danger-solid {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger-solid:hover:not(:disabled) {
+  background: #6e1226;
+  color: #fff;
+}
+.confirm-dialog {
+  width: min(400px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgba(42, 7, 16, 0.35);
+}
+.confirm-dialog::backdrop {
+  background: rgba(42, 7, 16, 0.55);
+}
+.confirm-dialog[open] {
+  animation: dialogIn 0.18s ease-out;
+}
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.confirm-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.confirm-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.confirm-title {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.confirm-message {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.confirm-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog[open] {
+    animation: none;
   }
 }

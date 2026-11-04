@@ -17,7 +17,8 @@ Spec desain: [`docs/superpowers/specs/2026-11-04-surat-cinta-design.md`](docs/su
 2. **Buat akun admin** di Supabase Dashboard › Authentication › Users › Add user (email + password).
 3. **Matikan pendaftaran publik** di Authentication › Sign In / Providers › nonaktifkan "Allow new users to sign up", supaya hanya akunmu yang bisa login.
 4. **Isi environment**: salin `.env.example` ke `.env.local`, lalu isi URL, anon key, service role key, dan `NEXT_PUBLIC_SITE_URL` (alamat https publik web ini, dipakai untuk gambar preview link).
-5. Jalankan:
+5. **(Opsional) Buka pendaftaran untuk orang lain**: isi `REGISTER_INVITE_CODE` dengan kode rahasia pilihanmu, lalu berikan kode itu ke orang yang boleh punya akun. Mereka mendaftar di `/admin/register` dan hanya bisa melihat serta mengedit surat milik mereka sendiri. Kosongkan variabel ini untuk menutup pendaftaran. Akun dibuat lewat service role, jadi tetap jalan walaupun "Allow new users to sign up" di Supabase dimatikan.
+6. Jalankan:
 
    ```bash
    npm install
