@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { registrationOpen } from '@/lib/registration';
 import { RegisterForm } from './RegisterForm';
 
 export const metadata: Metadata = { title: 'Daftar · Surat Cinta' };
 export const dynamic = 'force-dynamic';
 
 export default function RegisterPage() {
-  const open = Boolean(process.env.REGISTER_INVITE_CODE);
+  const open = registrationOpen();
   return (
     <main className="login-wrap">
       <div className="card login-card">
@@ -15,7 +16,7 @@ export default function RegisterPage() {
         {open ? (
           <>
             <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-              Kamu butuh kode undangan dari pemilik web ini. Surat yang kamu buat hanya bisa dilihat dan diedit dari akunmu.
+              Buat surat cinta digital dengan buket bunga untuk orang tersayang. Surat yang kamu buat hanya bisa dilihat dan diedit dari akunmu.
             </p>
             <RegisterForm />
           </>
