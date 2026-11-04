@@ -19,9 +19,10 @@ export function RegisterForm() {
         <label className="label" htmlFor="confirm">Ulangi password</label>
         <input className="input" id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={8} maxLength={72} required />
       </div>
-      <div className="field">
-        <label className="label" htmlFor="code">Kode undangan</label>
-        <input className="input" id="code" name="code" type="text" defaultValue={state.code} key={`c-${state.code}`} autoComplete="off" autoCapitalize="off" spellCheck={false} required />
+      {/* Honeypot: hidden from people and screen readers, filled in only by bots. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
+        <label htmlFor="website">Website</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
       </div>
       {state.error && <p className="alert alert-error" role="alert">{state.error}</p>}
       <button className="btn btn-primary btn-block" type="submit" disabled={pending}>

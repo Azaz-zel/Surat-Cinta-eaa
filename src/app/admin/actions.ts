@@ -1,14 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { letterConfigSchema } from '@/lib/letter/schema';
 import { MAX_MUSIC_BYTES, MAX_PHOTO_BYTES } from '@/lib/letter/options';
 import { generateSlug } from '@/lib/slug';
+import { registrationOpen } from '@/lib/registration';
+import { allow, clientIp } from '@/lib/rate-limit';
 
 export type LoginState = { error?: string; email?: string };
 
@@ -24,38 +26,37 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
 }
 
 /** Returned values refill the form, since React resets it after the action runs. Passwords are never echoed back. */
-export type RegisterState = { error?: string; email?: string; code?: string };
-
-function sameSecret(a: string, b: string): boolean {
-  const ha = createHash('sha256').update(a).digest();
-  const hb = createHash('sha256').update(b).digest();
-  return timingSafeEqual(ha, hb);
-}
+export type RegisterState = { error?: string; email?: string };
 
 const registerSchema = z
   .object({
     email: z.string().trim().email('Format email tidak valid.'),
     password: z.string().min(8, 'Password minimal 8 karakter.').max(72, 'Password maksimal 72 karakter.'),
     confirm: z.string(),
-    code: z.string().trim(),
   })
   .refine((v) => v.password === v.confirm, { message: 'Konfirmasi password tidak sama.', path: ['confirm'] });
 
-/** Registration is open only when REGISTER_INVITE_CODE is set, and only to people who know the code. */
+const REGISTER_LIMIT = 5;
+const REGISTER_WINDOW_MS = 60 * 60 * 1000;
+
+/** Open sign-up, guarded by a per-IP rate limit and a honeypot field that only bots fill in. */
 export async function register(_prev: RegisterState, formData: FormData): Promise<RegisterState> {
-  const expected = process.env.REGISTER_INVITE_CODE;
-  if (!expected) return { error: 'Pendaftaran sedang ditutup.' };
+  if (!registrationOpen()) return { error: 'Pendaftaran sedang ditutup.' };
+
+  const echo = { email: String(formData.get('email') ?? '') };
+  if (String(formData.get('website') ?? '') !== '') return { error: 'Gagal membuat akun. Coba lagi.', ...echo };
 
   const parsed = registerSchema.safeParse({
     email: formData.get('email') ?? '',
     password: formData.get('password') ?? '',
     confirm: formData.get('confirm') ?? '',
-    code: formData.get('code') ?? '',
   });
-  const echo = { email: String(formData.get('email') ?? ''), code: String(formData.get('code') ?? '') };
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Data belum lengkap.', ...echo };
-  const { email, password, code } = parsed.data;
-  if (!sameSecret(code, expected)) return { error: 'Kode undangan salah.', ...echo };
+  const { email, password } = parsed.data;
+  // Counted only once the form is valid, so typos don't use up the allowance.
+  if (!allow(`register:${clientIp(await headers())}`, REGISTER_LIMIT, REGISTER_WINDOW_MS)) {
+    return { error: 'Terlalu banyak percobaan daftar. Coba lagi sekitar satu jam lagi.', ...echo };
+  }
 
   // Created with the service role so it works even with public sign-ups disabled in Supabase,
   // and without a confirmation email.
